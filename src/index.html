@@ -39,13 +39,21 @@
         <button class="btn" id="btn-benign"><i class="dot benign"></i>Cas bénin</button>
         <button class="btn" id="btn-malignant"><i class="dot malignant"></i>Cas malin</button>
         <button class="btn ghost" id="btn-error">⚠ Une erreur du modèle</button>
+        <button class="btn ghost" id="btn-mean">⊙ Patient moyen</button>
       </div>
-      <div class="tabs" role="tablist" id="tabs"></div>
-      <p class="hint">La barre montre l'écart de chaque mesure à la moyenne d'entraînement, en écarts-types (z-score).</p>
+      <div class="toolbar">
+        <div class="tabs" role="tablist" id="tabs"></div>
+        <div class="edit-tools">
+          <span class="edit-count" id="edit-count"></span>
+          <button class="btn small" id="btn-reset" disabled>↺ Annuler mes modifications</button>
+        </div>
+      </div>
+      <p class="hint">✎ Modifiez une mesure en glissant le curseur (centre = moyenne d'entraînement, ± 3 écarts-types)
+        ou en tapant une valeur. La prédiction se recalcule automatiquement.</p>
       <div class="features" id="features"></div>
     </section>
 
-    <aside class="panel result">
+    <aside class="panel result" id="result">
       <h2>Prédiction</h2>
       <div class="ring-wrap">
         <svg viewBox="0 0 200 200" class="ring">

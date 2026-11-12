@@ -31,7 +31,7 @@ if (typeof document !== "undefined") {
   const fmt = v => (Math.round(v * 10000) / 10000).toString();
   const pct = v => `${(v * 100).toFixed(1).replace(".", ",")} %`;
   const RING = 2 * Math.PI * 84;
-  let model, rows = [], current = null, activeTab = 0, values = [];
+  let model, rows = [], current = null, activeTab = 0, values = [], base = [], timer;
 
   // Le modèle est injecté dans la page par build.py (window.MODEL)
   function init(m) {
@@ -70,6 +70,8 @@ if (typeof document !== "undefined") {
     });
   }
 
+  // Chaque mesure se règle au curseur (± 3 écarts-types autour de la moyenne d'entraînement)
+  // ou au clavier (valeur libre).
   function buildFeatures() {
     const box = $("features");
     box.innerHTML = "";
@@ -80,50 +82,82 @@ if (typeof document !== "undefined") {
       row.className = "feat";
       row.innerHTML = `
         <span class="feat-name" title="${model.feature_names[i]}">${FR[baseName(model.feature_names[i])]}</span>
-        <div class="zbar"><div class="zbar-fill"></div></div>
-        <input type="number" step="any">`;
-      const input = row.querySelector("input");
-      input.value = values[i] !== undefined ? fmt(values[i]) : "";
+        <input type="range" min="-3" max="3" step="0.01" aria-label="${FR[baseName(model.feature_names[i])]}">
+        <input type="number" step="any" min="0">`;
+      const [slider, input] = row.querySelectorAll("input");
+      slider.addEventListener("input", () => {
+        values[i] = Math.max(0, model.scaler.mean[i] + parseFloat(slider.value) * model.scaler.scale[i]);
+        input.value = fmt(values[i]);
+        changed();
+      });
       input.addEventListener("input", () => {
         values[i] = parseFloat(input.value);
-        current = null;
-        update();
+        changed();
       });
-      const bar = row.querySelector(".zbar");
-      bar.addEventListener("mousemove", e => showTip(e, `z = ${zscore(i).toFixed(2)} écart-type(s)<br><span style="color:#a9b4c8">moyenne train : ${fmt(model.scaler.mean[i])}</span>`));
-      bar.addEventListener("mouseleave", hideTip);
-      rows[i] = { input, fill: row.querySelector(".zbar-fill") };
+      slider.addEventListener("mousemove", e => showTip(e,
+        `${zscore(i) >= 0 ? "+" : ""}${zscore(i).toFixed(2)} écart-type(s) vs moyenne<br><span style="color:#a9b4c8">moyenne d'entraînement : ${fmt(model.scaler.mean[i])}</span>`));
+      slider.addEventListener("mouseleave", hideTip);
+      rows[i] = { row, slider, input };
       box.appendChild(row);
     }
-    updateBars();
+    syncInputs();
   }
 
   function zscore(i) { return (values[i] - model.scaler.mean[i]) / model.scaler.scale[i]; }
 
-  function updateBars() {
+  function syncInputs() {
     for (const i in rows) {
+      const { row, slider, input } = rows[i];
+      if (document.activeElement !== input) input.value = values[i] === undefined || Number.isNaN(values[i]) ? "" : fmt(values[i]);
       const z = Math.max(-3, Math.min(3, zscore(+i) || 0));
-      const w = Math.abs(z) / 3 * 50;
-      rows[i].fill.style.left = `${z < 0 ? 50 - w : 50}%`;
-      rows[i].fill.style.width = `${w}%`;
+      if (document.activeElement !== slider) slider.value = z;
+      // Remplissage du curseur depuis le centre (moyenne) jusqu'à la valeur
+      const pos = (z + 3) / 6 * 100;
+      slider.style.setProperty("--from", `${Math.min(50, pos)}%`);
+      slider.style.setProperty("--to", `${Math.max(50, pos)}%`);
+      row.classList.toggle("edited", base.length > 0 && Math.abs(values[i] - base[i]) > 1e-9);
     }
+    const n = editedCount();
+    $("btn-reset").disabled = n === 0;
+    $("edit-count").textContent = n ? `${n} mesure${n > 1 ? "s" : ""} modifiée${n > 1 ? "s" : ""}` : "";
+  }
+
+  function editedCount() {
+    return base.length ? values.filter((v, i) => Math.abs(v - base[i]) > 1e-9).length : 0;
   }
 
   function pick(list) { return list[Math.floor(Math.random() * list.length)]; }
 
   function loadPatient(p) {
     current = p;
+    base = p.x.slice();
     values = p.x.slice();
-    for (const i in rows) rows[i].input.value = fmt(values[i]);
     $("source").textContent = `Patient n°${p.index} · jeu de test`;
-    update();
+    changed();
   }
 
-  // ---------- Prédiction ----------
+  function changed() {
+    syncInputs();
+    schedulePredict();
+  }
+
+  // ---------- Prédiction (avec petit temps d'analyse) ----------
+  function schedulePredict() {
+    $("result").classList.add("loading");
+    $("ring-value").textContent = "";
+    $("verdict").className = "verdict";
+    $("verdict").innerHTML = `<span class="spinner"></span>Analyse en cours…`;
+    $("truth").textContent = "";
+    clearTimeout(timer);
+    timer = setTimeout(update, 700);
+  }
+
   function update() {
-    updateBars();
+    $("result").classList.remove("loading");
     document.querySelectorAll(".strip .pt").forEach(el => el.classList.toggle("current", current && +el.dataset.index === current.index));
     if (values.length !== 30 || values.some(Number.isNaN)) {
+      $("ring-value").textContent = "—";
+      $("ring-fill").style.strokeDashoffset = RING;
       $("verdict").textContent = "Valeurs incomplètes";
       $("verdict").className = "verdict";
       return;
@@ -136,13 +170,18 @@ if (typeof document !== "undefined") {
     $("ring-value").textContent = pct(prob);
     $("verdict").innerHTML = `<i class="dot ${malignant ? "malignant" : "benign"}"></i>${malignant ? "Tumeur maligne" : "Tumeur bénigne"}`;
     $("verdict").className = "verdict " + (malignant ? "malignant" : "benign");
-    if (current) {
+    const truth = current && `<b>${current.label === 1 ? "malin" : "bénin"}</b>`;
+    if (current && editedCount() === 0) {
       const ok = (current.label === 1) === malignant;
-      $("truth").innerHTML = `Diagnostic réel : <b>${current.label === 1 ? "malin" : "bénin"}</b> · ` +
+      $("truth").innerHTML = `Diagnostic réel : ${truth} · ` +
         (ok ? `<span class="ok">✓ bonne prédiction</span>` : `<span class="ko">✗ erreur du modèle</span>`);
+    } else if (current) {
+      const before = current.prob;
+      const delta = (prob - before) * 100;
+      $("truth").innerHTML = `Patient n°${current.index} modifié · diagnostic d'origine : ${truth}<br>` +
+        `<span class="delta">${delta >= 0 ? "+" : ""}${delta.toFixed(1).replace(".", ",")} pts vs les valeurs d'origine (${pct(before)})</span>`;
     } else {
-      $("source").textContent = "Valeurs modifiées à la main";
-      $("truth").textContent = "Diagnostic réel inconnu (saisie manuelle).";
+      $("truth").textContent = "Patient fictif : diagnostic réel inconnu.";
     }
   }
 
@@ -215,6 +254,14 @@ if (typeof document !== "undefined") {
   $("btn-benign").onclick = () => loadPatient(pick(model.test_set.filter(p => p.label === 0)));
   $("btn-malignant").onclick = () => loadPatient(pick(model.test_set.filter(p => p.label === 1)));
   $("btn-error").onclick = () => loadPatient(pick(model.test_set.filter(p => (p.prob >= 0.5 ? 1 : 0) !== p.label)));
+  $("btn-mean").onclick = () => {
+    current = null;
+    base = model.scaler.mean.slice();
+    values = base.slice();
+    $("source").textContent = "Patient moyen (fictif)";
+    changed();
+  };
+  $("btn-reset").onclick = () => { values = base.slice(); changed(); };
 
   init(window.MODEL);
 }

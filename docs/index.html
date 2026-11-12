@@ -85,16 +85,50 @@ h1 { font-size: clamp(2rem, 4.2vw, 3.2rem); line-height: 1.08; letter-spacing: -
 
 /* Features */
 .features { display: grid; grid-template-columns: repeat(auto-fit, minmax(330px, 1fr)); gap: 4px 26px; }
-.feat { display: grid; grid-template-columns: 1fr 96px 96px; align-items: center; gap: 12px; padding: 8px 0; border-bottom: 1px solid rgba(35, 48, 74, .6); }
+.feat { display: grid; grid-template-columns: minmax(0, 1fr) 130px 96px; align-items: center; gap: 12px; padding: 8px 0; border-bottom: 1px solid rgba(35, 48, 74, .6); }
 .feat-name { font-size: .88rem; color: var(--text-2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.zbar { position: relative; height: 8px; background: var(--bg); border-radius: 4px; }
-.zbar::after { content: ""; position: absolute; left: 50%; top: -3px; bottom: -3px; width: 1px; background: #3a4a6b; }
-.zbar-fill { position: absolute; top: 0; bottom: 0; background: #8796b8; border-radius: 4px; transition: left .25s, width .25s; }
-.feat input {
+.feat.edited .feat-name { color: var(--text); font-weight: 600; }
+.feat.edited .feat-name::before { content: "✎ "; color: var(--accent); }
+.feat input[type=number] {
   width: 100%; background: var(--bg); border: 1px solid var(--border); color: var(--text); border-radius: 8px;
   padding: 6px 9px; font: 500 .85rem "JetBrains Mono", monospace; text-align: right; outline: none;
 }
-.feat input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(124, 140, 255, .18); }
+.feat.edited input[type=number] { border-color: rgba(124, 140, 255, .55); }
+.feat input[type=number]:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(124, 140, 255, .18); }
+
+/* Curseur : piste sombre, repère central = moyenne, remplissage du centre à la valeur */
+.feat input[type=range] {
+  -webkit-appearance: none; appearance: none; width: 100%; height: 22px; margin: 0; background: transparent; cursor: pointer;
+  --from: 50%; --to: 50%;
+}
+.feat input[type=range]::-webkit-slider-runnable-track {
+  height: 6px; border-radius: 3px;
+  background:
+    linear-gradient(#3a4a6b, #3a4a6b) 50% 0 / 1px 100% no-repeat,
+    linear-gradient(90deg, transparent var(--from), #8796b8 var(--from), #8796b8 var(--to), transparent var(--to)),
+    var(--bg);
+}
+.feat input[type=range]::-moz-range-track {
+  height: 6px; border-radius: 3px;
+  background:
+    linear-gradient(#3a4a6b, #3a4a6b) 50% 0 / 1px 100% no-repeat,
+    linear-gradient(90deg, transparent var(--from), #8796b8 var(--from), #8796b8 var(--to), transparent var(--to)),
+    var(--bg);
+}
+.feat input[type=range]::-webkit-slider-thumb {
+  -webkit-appearance: none; width: 14px; height: 14px; margin-top: -4px; border-radius: 50%;
+  background: var(--text); border: 2px solid var(--surface); box-shadow: 0 0 0 1px #56648a; transition: transform .12s;
+}
+.feat input[type=range]::-moz-range-thumb { width: 12px; height: 12px; border-radius: 50%; background: var(--text); border: 2px solid var(--surface); }
+.feat input[type=range]:hover::-webkit-slider-thumb, .feat input[type=range]:active::-webkit-slider-thumb { transform: scale(1.25); box-shadow: 0 0 0 4px rgba(124, 140, 255, .25); }
+.feat.edited input[type=range]::-webkit-slider-thumb { background: var(--accent); }
+
+.toolbar { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; margin-bottom: 4px; }
+.toolbar .tabs { margin-bottom: 0; }
+.edit-tools { display: flex; align-items: center; gap: 10px; }
+.edit-count { font-size: .8rem; color: var(--accent); font-weight: 600; }
+.btn.small { padding: 6px 12px; font-size: .82rem; }
+.btn:disabled { opacity: .4; cursor: default; transform: none; }
 
 /* Result */
 .result { position: sticky; top: 20px; text-align: center; }
@@ -113,6 +147,17 @@ h1 { font-size: clamp(2rem, 4.2vw, 3.2rem); line-height: 1.08; letter-spacing: -
 .truth { margin-top: 16px; font-size: .9rem; color: var(--text-2); min-height: 1.4em; }
 .truth .ok { color: #4fc38a; font-weight: 600; }
 .truth .ko { color: #f08a84; font-weight: 600; }
+.truth .delta { color: var(--muted); font-size: .82rem; }
+
+/* Chargement de la prédiction */
+@keyframes spin { from { transform: rotate(-90deg); } to { transform: rotate(270deg); } }
+@keyframes pulse { 50% { opacity: .45; } }
+.result.loading .ring { animation: spin .9s linear infinite; }
+.result.loading .ring-fill { stroke: var(--accent) !important; stroke-dashoffset: 400 !important; transition: none; }
+.result.loading .ring-tick { opacity: 0; }
+.result.loading .ring-label { animation: pulse 1s ease-in-out infinite; }
+.result.loading .verdict { color: var(--text-2); }
+.spinner { width: 14px; height: 14px; border-radius: 50%; border: 2px solid var(--border); border-top-color: var(--accent); animation: spin .7s linear infinite; }
 .fine { color: var(--muted); font-size: .76rem; margin: 18px 0 0; }
 
 /* Evaluation */
@@ -180,13 +225,21 @@ footer { max-width: 1240px; margin: 0 auto; padding: 30px 24px 40px; color: var(
         <button class="btn" id="btn-benign"><i class="dot benign"></i>Cas bénin</button>
         <button class="btn" id="btn-malignant"><i class="dot malignant"></i>Cas malin</button>
         <button class="btn ghost" id="btn-error">⚠ Une erreur du modèle</button>
+        <button class="btn ghost" id="btn-mean">⊙ Patient moyen</button>
       </div>
-      <div class="tabs" role="tablist" id="tabs"></div>
-      <p class="hint">La barre montre l'écart de chaque mesure à la moyenne d'entraînement, en écarts-types (z-score).</p>
+      <div class="toolbar">
+        <div class="tabs" role="tablist" id="tabs"></div>
+        <div class="edit-tools">
+          <span class="edit-count" id="edit-count"></span>
+          <button class="btn small" id="btn-reset" disabled>↺ Annuler mes modifications</button>
+        </div>
+      </div>
+      <p class="hint">✎ Modifiez une mesure en glissant le curseur (centre = moyenne d'entraînement, ± 3 écarts-types)
+        ou en tapant une valeur. La prédiction se recalcule automatiquement.</p>
       <div class="features" id="features"></div>
     </section>
 
-    <aside class="panel result">
+    <aside class="panel result" id="result">
       <h2>Prédiction</h2>
       <div class="ring-wrap">
         <svg viewBox="0 0 200 200" class="ring">
@@ -267,7 +320,7 @@ if (typeof document !== "undefined") {
   const fmt = v => (Math.round(v * 10000) / 10000).toString();
   const pct = v => `${(v * 100).toFixed(1).replace(".", ",")} %`;
   const RING = 2 * Math.PI * 84;
-  let model, rows = [], current = null, activeTab = 0, values = [];
+  let model, rows = [], current = null, activeTab = 0, values = [], base = [], timer;
 
   // Le modèle est injecté dans la page par build.py (window.MODEL)
   function init(m) {
@@ -306,6 +359,8 @@ if (typeof document !== "undefined") {
     });
   }
 
+  // Chaque mesure se règle au curseur (± 3 écarts-types autour de la moyenne d'entraînement)
+  // ou au clavier (valeur libre).
   function buildFeatures() {
     const box = $("features");
     box.innerHTML = "";
@@ -316,50 +371,82 @@ if (typeof document !== "undefined") {
       row.className = "feat";
       row.innerHTML = `
         <span class="feat-name" title="${model.feature_names[i]}">${FR[baseName(model.feature_names[i])]}</span>
-        <div class="zbar"><div class="zbar-fill"></div></div>
-        <input type="number" step="any">`;
-      const input = row.querySelector("input");
-      input.value = values[i] !== undefined ? fmt(values[i]) : "";
+        <input type="range" min="-3" max="3" step="0.01" aria-label="${FR[baseName(model.feature_names[i])]}">
+        <input type="number" step="any" min="0">`;
+      const [slider, input] = row.querySelectorAll("input");
+      slider.addEventListener("input", () => {
+        values[i] = Math.max(0, model.scaler.mean[i] + parseFloat(slider.value) * model.scaler.scale[i]);
+        input.value = fmt(values[i]);
+        changed();
+      });
       input.addEventListener("input", () => {
         values[i] = parseFloat(input.value);
-        current = null;
-        update();
+        changed();
       });
-      const bar = row.querySelector(".zbar");
-      bar.addEventListener("mousemove", e => showTip(e, `z = ${zscore(i).toFixed(2)} écart-type(s)<br><span style="color:#a9b4c8">moyenne train : ${fmt(model.scaler.mean[i])}</span>`));
-      bar.addEventListener("mouseleave", hideTip);
-      rows[i] = { input, fill: row.querySelector(".zbar-fill") };
+      slider.addEventListener("mousemove", e => showTip(e,
+        `${zscore(i) >= 0 ? "+" : ""}${zscore(i).toFixed(2)} écart-type(s) vs moyenne<br><span style="color:#a9b4c8">moyenne d'entraînement : ${fmt(model.scaler.mean[i])}</span>`));
+      slider.addEventListener("mouseleave", hideTip);
+      rows[i] = { row, slider, input };
       box.appendChild(row);
     }
-    updateBars();
+    syncInputs();
   }
 
   function zscore(i) { return (values[i] - model.scaler.mean[i]) / model.scaler.scale[i]; }
 
-  function updateBars() {
+  function syncInputs() {
     for (const i in rows) {
+      const { row, slider, input } = rows[i];
+      if (document.activeElement !== input) input.value = values[i] === undefined || Number.isNaN(values[i]) ? "" : fmt(values[i]);
       const z = Math.max(-3, Math.min(3, zscore(+i) || 0));
-      const w = Math.abs(z) / 3 * 50;
-      rows[i].fill.style.left = `${z < 0 ? 50 - w : 50}%`;
-      rows[i].fill.style.width = `${w}%`;
+      if (document.activeElement !== slider) slider.value = z;
+      // Remplissage du curseur depuis le centre (moyenne) jusqu'à la valeur
+      const pos = (z + 3) / 6 * 100;
+      slider.style.setProperty("--from", `${Math.min(50, pos)}%`);
+      slider.style.setProperty("--to", `${Math.max(50, pos)}%`);
+      row.classList.toggle("edited", base.length > 0 && Math.abs(values[i] - base[i]) > 1e-9);
     }
+    const n = editedCount();
+    $("btn-reset").disabled = n === 0;
+    $("edit-count").textContent = n ? `${n} mesure${n > 1 ? "s" : ""} modifiée${n > 1 ? "s" : ""}` : "";
+  }
+
+  function editedCount() {
+    return base.length ? values.filter((v, i) => Math.abs(v - base[i]) > 1e-9).length : 0;
   }
 
   function pick(list) { return list[Math.floor(Math.random() * list.length)]; }
 
   function loadPatient(p) {
     current = p;
+    base = p.x.slice();
     values = p.x.slice();
-    for (const i in rows) rows[i].input.value = fmt(values[i]);
     $("source").textContent = `Patient n°${p.index} · jeu de test`;
-    update();
+    changed();
   }
 
-  // ---------- Prédiction ----------
+  function changed() {
+    syncInputs();
+    schedulePredict();
+  }
+
+  // ---------- Prédiction (avec petit temps d'analyse) ----------
+  function schedulePredict() {
+    $("result").classList.add("loading");
+    $("ring-value").textContent = "";
+    $("verdict").className = "verdict";
+    $("verdict").innerHTML = `<span class="spinner"></span>Analyse en cours…`;
+    $("truth").textContent = "";
+    clearTimeout(timer);
+    timer = setTimeout(update, 700);
+  }
+
   function update() {
-    updateBars();
+    $("result").classList.remove("loading");
     document.querySelectorAll(".strip .pt").forEach(el => el.classList.toggle("current", current && +el.dataset.index === current.index));
     if (values.length !== 30 || values.some(Number.isNaN)) {
+      $("ring-value").textContent = "—";
+      $("ring-fill").style.strokeDashoffset = RING;
       $("verdict").textContent = "Valeurs incomplètes";
       $("verdict").className = "verdict";
       return;
@@ -372,13 +459,18 @@ if (typeof document !== "undefined") {
     $("ring-value").textContent = pct(prob);
     $("verdict").innerHTML = `<i class="dot ${malignant ? "malignant" : "benign"}"></i>${malignant ? "Tumeur maligne" : "Tumeur bénigne"}`;
     $("verdict").className = "verdict " + (malignant ? "malignant" : "benign");
-    if (current) {
+    const truth = current && `<b>${current.label === 1 ? "malin" : "bénin"}</b>`;
+    if (current && editedCount() === 0) {
       const ok = (current.label === 1) === malignant;
-      $("truth").innerHTML = `Diagnostic réel : <b>${current.label === 1 ? "malin" : "bénin"}</b> · ` +
+      $("truth").innerHTML = `Diagnostic réel : ${truth} · ` +
         (ok ? `<span class="ok">✓ bonne prédiction</span>` : `<span class="ko">✗ erreur du modèle</span>`);
+    } else if (current) {
+      const before = current.prob;
+      const delta = (prob - before) * 100;
+      $("truth").innerHTML = `Patient n°${current.index} modifié · diagnostic d'origine : ${truth}<br>` +
+        `<span class="delta">${delta >= 0 ? "+" : ""}${delta.toFixed(1).replace(".", ",")} pts vs les valeurs d'origine (${pct(before)})</span>`;
     } else {
-      $("source").textContent = "Valeurs modifiées à la main";
-      $("truth").textContent = "Diagnostic réel inconnu (saisie manuelle).";
+      $("truth").textContent = "Patient fictif : diagnostic réel inconnu.";
     }
   }
 
@@ -451,6 +543,14 @@ if (typeof document !== "undefined") {
   $("btn-benign").onclick = () => loadPatient(pick(model.test_set.filter(p => p.label === 0)));
   $("btn-malignant").onclick = () => loadPatient(pick(model.test_set.filter(p => p.label === 1)));
   $("btn-error").onclick = () => loadPatient(pick(model.test_set.filter(p => (p.prob >= 0.5 ? 1 : 0) !== p.label)));
+  $("btn-mean").onclick = () => {
+    current = null;
+    base = model.scaler.mean.slice();
+    values = base.slice();
+    $("source").textContent = "Patient moyen (fictif)";
+    changed();
+  };
+  $("btn-reset").onclick = () => { values = base.slice(); changed(); };
 
   init(window.MODEL);
 }
