@@ -6,9 +6,9 @@ const FR = {
   "concave points": "Points concaves", "symmetry": "Symétrie", "fractal dimension": "Dimension fractale",
 };
 const GROUPS = [
-  { title: "Moyenne", from: 0 },
-  { title: "Erreur standard", from: 10 },
-  { title: "Pire valeur", from: 20 },
+  { title: "Moyenne", desc: "valeur moyenne sur les noyaux", from: 0 },
+  { title: "Erreur standard", desc: "variabilité entre noyaux", from: 10 },
+  { title: "Pire valeur", desc: "moyenne des 3 plus grandes", from: 20 },
 ];
 
 function predict(model, x) {
@@ -31,13 +31,12 @@ if (typeof document !== "undefined") {
   const fmt = v => (Math.round(v * 10000) / 10000).toString();
   const pct = v => `${(v * 100).toFixed(1).replace(".", ",")} %`;
   const RING = 2 * Math.PI * 84;
-  let model, rows = [], current = null, activeTab = 0, values = [], base = [], timer;
+  let model, rows = [], current = null, values = [], base = [], timer;
 
   // Le modèle est injecté dans la page par build.py (window.MODEL)
   function init(m) {
     model = m;
     model.test_set.forEach(p => { p.prob = predict(model, p.x); });
-    buildTabs();
     buildFeatures();
     renderKpis();
     renderConfusion();
@@ -56,49 +55,39 @@ if (typeof document !== "undefined") {
   const hideTip = () => tip.classList.remove("show");
 
   // ---------- Saisie des caractéristiques ----------
-  function buildTabs() {
-    GROUPS.forEach((g, k) => {
-      const b = document.createElement("button");
-      b.className = "tab" + (k === 0 ? " active" : "");
-      b.textContent = g.title;
-      b.onclick = () => {
-        activeTab = k;
-        document.querySelectorAll(".tab").forEach((t, j) => t.classList.toggle("active", j === k));
-        buildFeatures();
-      };
-      $("tabs").appendChild(b);
-    });
-  }
-
   // Chaque mesure se règle au curseur (± 3 écarts-types autour de la moyenne d'entraînement)
   // ou au clavier (valeur libre).
   function buildFeatures() {
     const box = $("features");
-    box.innerHTML = "";
-    rows = [];
-    const from = GROUPS[activeTab].from;
-    for (let i = from; i < from + 10; i++) {
-      const row = document.createElement("div");
-      row.className = "feat";
-      row.innerHTML = `
-        <span class="feat-name" title="${model.feature_names[i]}">${FR[baseName(model.feature_names[i])]}</span>
-        <input type="range" min="-3" max="3" step="0.01" aria-label="${FR[baseName(model.feature_names[i])]}">
-        <input type="number" step="any" min="0">`;
-      const [slider, input] = row.querySelectorAll("input");
-      slider.addEventListener("input", () => {
-        values[i] = Math.max(0, model.scaler.mean[i] + parseFloat(slider.value) * model.scaler.scale[i]);
-        input.value = fmt(values[i]);
-        changed();
-      });
-      input.addEventListener("input", () => {
-        values[i] = parseFloat(input.value);
-        changed();
-      });
-      slider.addEventListener("mousemove", e => showTip(e,
-        `${zscore(i) >= 0 ? "+" : ""}${zscore(i).toFixed(2)} écart-type(s) vs moyenne<br><span style="color:#a9b4c8">moyenne d'entraînement : ${fmt(model.scaler.mean[i])}</span>`));
-      slider.addEventListener("mouseleave", hideTip);
-      rows[i] = { row, slider, input };
-      box.appendChild(row);
+    for (const g of GROUPS) {
+      const group = document.createElement("div");
+      group.className = "feat-group";
+      group.innerHTML = `<h3>${g.title} <span>${g.desc}</span></h3><div class="feat-grid"></div>`;
+      box.appendChild(group);
+      const grid = group.querySelector(".feat-grid");
+      for (let i = g.from; i < g.from + 10; i++) {
+        const row = document.createElement("div");
+        row.className = "feat";
+        row.innerHTML = `
+          <span class="feat-name" title="${model.feature_names[i]}">${FR[baseName(model.feature_names[i])]}</span>
+          <input type="range" min="-3" max="3" step="0.01" aria-label="${FR[baseName(model.feature_names[i])]}">
+          <input type="number" step="any" min="0">`;
+        const [slider, input] = row.querySelectorAll("input");
+        slider.addEventListener("input", () => {
+          values[i] = Math.max(0, model.scaler.mean[i] + parseFloat(slider.value) * model.scaler.scale[i]);
+          input.value = fmt(values[i]);
+          changed();
+        });
+        input.addEventListener("input", () => {
+          values[i] = parseFloat(input.value);
+          changed();
+        });
+        slider.addEventListener("mousemove", e => showTip(e,
+          `${zscore(i) >= 0 ? "+" : ""}${zscore(i).toFixed(2)} écart-type(s) vs moyenne<br><span style="color:#a9b4c8">moyenne d'entraînement : ${fmt(model.scaler.mean[i])}</span>`));
+        slider.addEventListener("mouseleave", hideTip);
+        rows[i] = { row, slider, input };
+        grid.appendChild(row);
+      }
     }
     syncInputs();
   }

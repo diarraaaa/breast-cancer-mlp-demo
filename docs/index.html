@@ -77,14 +77,13 @@ h1 { font-size: clamp(2rem, 4.2vw, 3.2rem); line-height: 1.08; letter-spacing: -
 .dot.benign { background: var(--benign); }
 .dot.malignant { background: var(--malignant); }
 
-/* Tabs */
-.tabs { display: inline-flex; background: var(--bg); border: 1px solid var(--border); border-radius: 12px; padding: 4px; gap: 4px; margin-bottom: 10px; }
-.tab { border: 0; background: transparent; color: var(--text-2); font: 500 .86rem "Inter", sans-serif; padding: 7px 14px; border-radius: 9px; cursor: pointer; }
-.tab.active { background: var(--surface-2); color: var(--text); box-shadow: 0 1px 0 rgba(255,255,255,.04) inset; }
 .hint { color: var(--muted); font-size: .8rem; margin: 6px 0 14px; }
 
 /* Features */
-.features { display: grid; grid-template-columns: repeat(auto-fit, minmax(330px, 1fr)); gap: 4px 26px; }
+.features { display: flex; flex-direction: column; gap: 22px; }
+.feat-group h3 { margin: 0 0 4px; font-size: .78rem; text-transform: uppercase; letter-spacing: .1em; color: var(--benign); font-weight: 700; }
+.feat-group h3 span { text-transform: none; letter-spacing: 0; color: var(--muted); font-weight: 500; margin-left: 6px; font-size: .8rem; }
+.feat-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(330px, 1fr)); gap: 0 26px; }
 .feat { display: grid; grid-template-columns: minmax(0, 1fr) 130px 96px; align-items: center; gap: 12px; padding: 8px 0; border-bottom: 1px solid rgba(35, 48, 74, .6); }
 .feat-name { font-size: .88rem; color: var(--text-2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .feat.edited .feat-name { color: var(--text); font-weight: 600; }
@@ -123,8 +122,8 @@ h1 { font-size: clamp(2rem, 4.2vw, 3.2rem); line-height: 1.08; letter-spacing: -
 .feat input[type=range]:hover::-webkit-slider-thumb, .feat input[type=range]:active::-webkit-slider-thumb { transform: scale(1.25); box-shadow: 0 0 0 4px rgba(124, 140, 255, .25); }
 .feat.edited input[type=range]::-webkit-slider-thumb { background: var(--accent); }
 
-.toolbar { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; margin-bottom: 4px; }
-.toolbar .tabs { margin-bottom: 0; }
+.toolbar { display: flex; justify-content: space-between; align-items: center; gap: 16px; flex-wrap: wrap; margin-bottom: 14px; }
+.toolbar .hint { flex: 1 1 380px; margin: 0; }
 .edit-tools { display: flex; align-items: center; gap: 10px; }
 .edit-count { font-size: .8rem; color: var(--accent); font-weight: 600; }
 .btn.small { padding: 6px 12px; font-size: .82rem; }
@@ -228,14 +227,14 @@ footer { max-width: 1240px; margin: 0 auto; padding: 30px 24px 40px; color: var(
         <button class="btn ghost" id="btn-mean">⊙ Patient moyen</button>
       </div>
       <div class="toolbar">
-        <div class="tabs" role="tablist" id="tabs"></div>
+        <p class="hint">✎ Les 30 mesures sont modifiables : glissez un curseur (centre = moyenne d'entraînement,
+          ± 3 écarts-types) ou tapez une valeur. La prédiction se recalcule automatiquement.</p>
         <div class="edit-tools">
           <span class="edit-count" id="edit-count"></span>
           <button class="btn small" id="btn-reset" disabled>↺ Annuler mes modifications</button>
         </div>
       </div>
-      <p class="hint">✎ Modifiez une mesure en glissant le curseur (centre = moyenne d'entraînement, ± 3 écarts-types)
-        ou en tapant une valeur. La prédiction se recalcule automatiquement.</p>
+
       <div class="features" id="features"></div>
     </section>
 
@@ -295,9 +294,9 @@ const FR = {
   "concave points": "Points concaves", "symmetry": "Symétrie", "fractal dimension": "Dimension fractale",
 };
 const GROUPS = [
-  { title: "Moyenne", from: 0 },
-  { title: "Erreur standard", from: 10 },
-  { title: "Pire valeur", from: 20 },
+  { title: "Moyenne", desc: "valeur moyenne sur les noyaux", from: 0 },
+  { title: "Erreur standard", desc: "variabilité entre noyaux", from: 10 },
+  { title: "Pire valeur", desc: "moyenne des 3 plus grandes", from: 20 },
 ];
 
 function predict(model, x) {
@@ -320,13 +319,12 @@ if (typeof document !== "undefined") {
   const fmt = v => (Math.round(v * 10000) / 10000).toString();
   const pct = v => `${(v * 100).toFixed(1).replace(".", ",")} %`;
   const RING = 2 * Math.PI * 84;
-  let model, rows = [], current = null, activeTab = 0, values = [], base = [], timer;
+  let model, rows = [], current = null, values = [], base = [], timer;
 
   // Le modèle est injecté dans la page par build.py (window.MODEL)
   function init(m) {
     model = m;
     model.test_set.forEach(p => { p.prob = predict(model, p.x); });
-    buildTabs();
     buildFeatures();
     renderKpis();
     renderConfusion();
@@ -345,49 +343,39 @@ if (typeof document !== "undefined") {
   const hideTip = () => tip.classList.remove("show");
 
   // ---------- Saisie des caractéristiques ----------
-  function buildTabs() {
-    GROUPS.forEach((g, k) => {
-      const b = document.createElement("button");
-      b.className = "tab" + (k === 0 ? " active" : "");
-      b.textContent = g.title;
-      b.onclick = () => {
-        activeTab = k;
-        document.querySelectorAll(".tab").forEach((t, j) => t.classList.toggle("active", j === k));
-        buildFeatures();
-      };
-      $("tabs").appendChild(b);
-    });
-  }
-
   // Chaque mesure se règle au curseur (± 3 écarts-types autour de la moyenne d'entraînement)
   // ou au clavier (valeur libre).
   function buildFeatures() {
     const box = $("features");
-    box.innerHTML = "";
-    rows = [];
-    const from = GROUPS[activeTab].from;
-    for (let i = from; i < from + 10; i++) {
-      const row = document.createElement("div");
-      row.className = "feat";
-      row.innerHTML = `
-        <span class="feat-name" title="${model.feature_names[i]}">${FR[baseName(model.feature_names[i])]}</span>
-        <input type="range" min="-3" max="3" step="0.01" aria-label="${FR[baseName(model.feature_names[i])]}">
-        <input type="number" step="any" min="0">`;
-      const [slider, input] = row.querySelectorAll("input");
-      slider.addEventListener("input", () => {
-        values[i] = Math.max(0, model.scaler.mean[i] + parseFloat(slider.value) * model.scaler.scale[i]);
-        input.value = fmt(values[i]);
-        changed();
-      });
-      input.addEventListener("input", () => {
-        values[i] = parseFloat(input.value);
-        changed();
-      });
-      slider.addEventListener("mousemove", e => showTip(e,
-        `${zscore(i) >= 0 ? "+" : ""}${zscore(i).toFixed(2)} écart-type(s) vs moyenne<br><span style="color:#a9b4c8">moyenne d'entraînement : ${fmt(model.scaler.mean[i])}</span>`));
-      slider.addEventListener("mouseleave", hideTip);
-      rows[i] = { row, slider, input };
-      box.appendChild(row);
+    for (const g of GROUPS) {
+      const group = document.createElement("div");
+      group.className = "feat-group";
+      group.innerHTML = `<h3>${g.title} <span>${g.desc}</span></h3><div class="feat-grid"></div>`;
+      box.appendChild(group);
+      const grid = group.querySelector(".feat-grid");
+      for (let i = g.from; i < g.from + 10; i++) {
+        const row = document.createElement("div");
+        row.className = "feat";
+        row.innerHTML = `
+          <span class="feat-name" title="${model.feature_names[i]}">${FR[baseName(model.feature_names[i])]}</span>
+          <input type="range" min="-3" max="3" step="0.01" aria-label="${FR[baseName(model.feature_names[i])]}">
+          <input type="number" step="any" min="0">`;
+        const [slider, input] = row.querySelectorAll("input");
+        slider.addEventListener("input", () => {
+          values[i] = Math.max(0, model.scaler.mean[i] + parseFloat(slider.value) * model.scaler.scale[i]);
+          input.value = fmt(values[i]);
+          changed();
+        });
+        input.addEventListener("input", () => {
+          values[i] = parseFloat(input.value);
+          changed();
+        });
+        slider.addEventListener("mousemove", e => showTip(e,
+          `${zscore(i) >= 0 ? "+" : ""}${zscore(i).toFixed(2)} écart-type(s) vs moyenne<br><span style="color:#a9b4c8">moyenne d'entraînement : ${fmt(model.scaler.mean[i])}</span>`));
+        slider.addEventListener("mouseleave", hideTip);
+        rows[i] = { row, slider, input };
+        grid.appendChild(row);
+      }
     }
     syncInputs();
   }
