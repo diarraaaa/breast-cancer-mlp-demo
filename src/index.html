@@ -1,0 +1,96 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>OncoMLP · Testeur du modèle du TP1 Deep Learning</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="glow"></div>
+
+  <nav class="topbar">
+    <div class="brand"><span class="logo">◎</span> OncoMLP</div>
+    <div class="nav-right">
+      <span class="pill-warn">Projet pédagogique · pas un outil médical</span>
+      <a class="gh" href="https://github.com/diarraaaa/breast-cancer-mlp-demo" target="_blank" rel="noopener">GitHub ↗</a>
+    </div>
+  </nav>
+
+  <header class="hero">
+    <p class="eyebrow">TP1 Deep Learning · Breast Cancer Wisconsin</p>
+    <h1>Testez le réseau de neurones<br><span class="grad">en direct, dans votre navigateur.</span></h1>
+    <p class="lead">Un MLP <code>30 → 16 → 8 → 1</code> entraîné en PyTorch classe chaque tumeur comme bénigne ou maligne
+      à partir de 30 mesures de noyaux cellulaires. Chargez un patient jamais vu à l'entraînement, ou modifiez ses mesures.</p>
+    <div class="kpis" id="kpis"></div>
+  </header>
+
+  <main class="layout">
+    <section class="panel inputs">
+      <div class="panel-head">
+        <h2>Patient</h2>
+        <p class="muted" id="source">—</p>
+      </div>
+      <div class="actions">
+        <button class="btn primary" id="btn-random">🎲 Aléatoire</button>
+        <button class="btn" id="btn-benign"><i class="dot benign"></i>Cas bénin</button>
+        <button class="btn" id="btn-malignant"><i class="dot malignant"></i>Cas malin</button>
+        <button class="btn ghost" id="btn-error">⚠ Une erreur du modèle</button>
+      </div>
+      <div class="tabs" role="tablist" id="tabs"></div>
+      <p class="hint">La barre montre l'écart de chaque mesure à la moyenne d'entraînement, en écarts-types (z-score).</p>
+      <div class="features" id="features"></div>
+    </section>
+
+    <aside class="panel result">
+      <h2>Prédiction</h2>
+      <div class="ring-wrap">
+        <svg viewBox="0 0 200 200" class="ring">
+          <circle cx="100" cy="100" r="84" class="ring-track"/>
+          <circle cx="100" cy="100" r="84" class="ring-fill" id="ring-fill"/>
+          <line x1="6" y1="100" x2="26" y2="100" class="ring-tick"/>
+        </svg>
+        <div class="ring-center">
+          <div class="ring-value" id="ring-value">—</div>
+          <div class="ring-label">probabilité maligne</div>
+        </div>
+      </div>
+      <div class="verdict" id="verdict">—</div>
+      <div class="truth" id="truth"></div>
+      <p class="fine">Seuil de décision : 50 % (repère en bas de l'anneau).</p>
+    </aside>
+  </main>
+
+  <section class="panel eval">
+    <div class="panel-head">
+      <h2>Performance sur le jeu de test</h2>
+      <p class="muted">114 patients jamais vus, recalculé en direct dans le navigateur.</p>
+    </div>
+    <div class="eval-grid">
+      <div>
+        <h3>Matrice de confusion</h3>
+        <div class="cm" id="cm"></div>
+      </div>
+      <div class="strip-wrap">
+        <h3>Probabilité prédite pour chaque patient</h3>
+        <div class="legend">
+          <span><i class="dot benign"></i>Réellement bénin</span>
+          <span><i class="dot malignant"></i>Réellement malin</span>
+          <span class="muted">Cliquez un point pour charger le patient</span>
+        </div>
+        <div class="strip" id="strip"></div>
+      </div>
+    </div>
+  </section>
+
+  <footer>
+    Données UCI Breast Cancer Wisconsin (Diagnostic) · Split stratifié 60/20/20 · StandardScaler · SGD lr 0,01, 75 époques
+  </footer>
+
+  <div class="tooltip" id="tooltip"></div>
+  <script src="app.js"></script>
+</body>
+</html>

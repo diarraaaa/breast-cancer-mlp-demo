@@ -33,7 +33,8 @@ if (typeof document !== "undefined") {
   const RING = 2 * Math.PI * 84;
   let model, rows = [], current = null, activeTab = 0, values = [];
 
-  fetch("model.json").then(r => r.json()).then(m => {
+  // Le modèle est injecté dans la page par build.py (window.MODEL)
+  function init(m) {
     model = m;
     model.test_set.forEach(p => { p.prob = predict(model, p.x); });
     buildTabs();
@@ -42,7 +43,7 @@ if (typeof document !== "undefined") {
     renderConfusion();
     renderStrip();
     loadPatient(pick(model.test_set.filter(p => p.label === 1)));
-  });
+  }
 
   // ---------- Tooltip ----------
   const tip = $("tooltip");
@@ -214,4 +215,6 @@ if (typeof document !== "undefined") {
   $("btn-benign").onclick = () => loadPatient(pick(model.test_set.filter(p => p.label === 0)));
   $("btn-malignant").onclick = () => loadPatient(pick(model.test_set.filter(p => p.label === 1)));
   $("btn-error").onclick = () => loadPatient(pick(model.test_set.filter(p => (p.prob >= 0.5 ? 1 : 0) !== p.label)));
+
+  init(window.MODEL);
 }

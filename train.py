@@ -1,4 +1,4 @@
-"""Entraîne le MLP du TP1 (PyTorch) et exporte poids + scaler dans docs/model.json.
+"""Entraîne le MLP du TP1 (PyTorch) et exporte poids + scaler dans src/model.json.
 
 Reprend exactement le pipeline du notebook Tp1_Deep_Learning.ipynb :
 split stratifié 60/20/20 (random_state=42), StandardScaler ajusté sur train,
@@ -17,7 +17,7 @@ from sklearn.metrics import (accuracy_score, f1_score, precision_score,
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import StandardScaler
 
-OUT = Path(__file__).parent / "docs" / "model.json"
+OUT = Path(__file__).parent / "src" / "model.json"
 
 # 1. Données : sklearn code 0 = maligne, on ré-encode comme le TP (B = 0, M = 1)
 data = load_breast_cancer()

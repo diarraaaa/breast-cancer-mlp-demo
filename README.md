@@ -21,7 +21,8 @@ Breast Cancer Wisconsin (Diagnostic).
 
 ```bash
 pip install torch scikit-learn numpy
-python train.py   # régénère docs/model.json
+python train.py   # régénère src/model.json
+python build.py   # assemble docs/index.html (fichier unique autonome)
 ```
 
 `train.py` reproduit le pipeline du notebook : split stratifié 60/20/20 (`random_state=42`),
