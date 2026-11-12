@@ -73,11 +73,17 @@ h1 { font-size: clamp(2rem, 4.2vw, 3.2rem); line-height: 1.08; letter-spacing: -
 .features { display: flex; flex-direction: column; gap: 22px; }
 .feat-group h3 { margin: 0 0 4px; font-size: .78rem; text-transform: uppercase; letter-spacing: .1em; color: var(--benign); font-weight: 700; }
 .feat-group h3 span { text-transform: none; letter-spacing: 0; color: var(--muted); font-weight: 500; margin-left: 6px; font-size: .8rem; }
-.feat-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(330px, 1fr)); gap: 0 26px; }
-.feat { display: grid; grid-template-columns: minmax(0, 1fr) 130px 96px; align-items: center; gap: 12px; padding: 8px 0; border-bottom: 1px solid rgba(35, 48, 74, .6); }
-.feat-name { font-size: .88rem; color: var(--text-2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.feat.edited .feat-name { color: var(--text); font-weight: 600; }
-.feat.edited .feat-name::before { content: "✎ "; color: var(--accent); }
+.feat-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(360px, 1fr)); gap: 0 22px; }
+.feat { display: grid; grid-template-columns: minmax(0, 1fr) 96px 84px; align-items: center; gap: 10px; padding: 7px 0; min-height: 56px; border-bottom: 1px solid rgba(35, 48, 74, .6); }
+.feat-name { display: flex; flex-direction: column; min-width: 0; line-height: 1.25; }
+.feat-name .fr { font-size: .88rem; color: var(--text); font-weight: 500; }
+.feat-name em { font-style: normal; font-size: .7rem; font-weight: 600; padding: 1px 6px; border-radius: 5px; margin-left: 4px; white-space: nowrap; vertical-align: 1px; }
+.feat-name .tag-0 { color: #7fd3ee; background: rgba(42, 159, 196, .14); }
+.feat-name .tag-1 { color: #b9c1d6; background: rgba(135, 150, 184, .16); }
+.feat-name .tag-2 { color: #f5c27a; background: rgba(245, 194, 122, .12); }
+.feat-name small { font: 500 .72rem "JetBrains Mono", monospace; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.feat.edited .feat-name .fr { font-weight: 700; }
+.feat.edited .feat-name .fr::before { content: "✎ "; color: var(--accent); }
 .feat input[type=number] {
   width: 100%; background: var(--bg); border: 1px solid var(--border); color: var(--text); border-radius: 8px;
   padding: 6px 9px; font: 500 .85rem "JetBrains Mono", monospace; text-align: right; outline: none;

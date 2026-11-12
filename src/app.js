@@ -6,9 +6,9 @@ const FR = {
   "concave points": "Points concaves", "symmetry": "Symétrie", "fractal dimension": "Dimension fractale",
 };
 const GROUPS = [
-  { title: "Moyenne", desc: "valeur moyenne sur les noyaux", from: 0 },
-  { title: "Erreur standard", desc: "variabilité entre noyaux", from: 10 },
-  { title: "Pire valeur", desc: "moyenne des 3 plus grandes", from: 20 },
+  { title: "Moyenne", tag: "moyenne", desc: "valeur moyenne sur les noyaux", from: 0 },
+  { title: "Erreur standard", tag: "err. std", desc: "variabilité entre noyaux", from: 10 },
+  { title: "Pire valeur", tag: "pire", desc: "moyenne des 3 plus grandes", from: 20 },
 ];
 
 function predict(model, x) {
@@ -69,8 +69,8 @@ if (typeof document !== "undefined") {
         const row = document.createElement("div");
         row.className = "feat";
         row.innerHTML = `
-          <span class="feat-name" title="${model.feature_names[i]}">${FR[baseName(model.feature_names[i])]}</span>
-          <input type="range" min="-3" max="3" step="0.01" aria-label="${FR[baseName(model.feature_names[i])]}">
+          <span class="feat-name"><span class="fr">${FR[baseName(model.feature_names[i])]} <em class="tag-${g.from / 10}">${g.tag}</em></span><small>${model.feature_names[i]}</small></span>
+          <input type="range" min="-3" max="3" step="0.01" aria-label="${FR[baseName(model.feature_names[i])]} (${g.tag})">
           <input type="number" step="any" min="0">`;
         const [slider, input] = row.querySelectorAll("input");
         slider.addEventListener("input", () => {
@@ -168,7 +168,7 @@ if (typeof document !== "undefined") {
       const before = current.prob;
       const delta = (prob - before) * 100;
       $("truth").innerHTML = `Patient n°${current.index} modifié · diagnostic d'origine : ${truth}<br>` +
-        `<span class="delta">${delta >= 0 ? "+" : ""}${delta.toFixed(1).replace(".", ",")} pts vs les valeurs d'origine (${pct(before)})</span>`;
+        `<span class="delta">${Math.abs(delta) < 0.05 ? "±" : delta > 0 ? "+" : "−"}${Math.abs(delta).toFixed(1).replace(".", ",")} pts vs les valeurs d'origine (${pct(before)})</span>`;
     } else {
       $("truth").textContent = "Patient fictif : diagnostic réel inconnu.";
     }
