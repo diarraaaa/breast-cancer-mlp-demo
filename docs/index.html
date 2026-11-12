@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Test du MLP — Cancer du sein (TP1 Deep Learning)</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header>
+    <h1>Diagnostic tumeur : testeur du MLP</h1>
+    <p class="sub">Réseau <code>30 → 16 → 8 → 1</code> entraîné en PyTorch (TP1 Deep Learning) sur le dataset
+      Breast Cancer Wisconsin. Le modèle tourne entièrement dans votre navigateur.</p>
+    <p class="warn">⚠️ Projet pédagogique : ne constitue en aucun cas un outil de diagnostic médical.</p>
+  </header>
+
+  <main>
+    <section class="card">
+      <h2>1. Choisir un patient</h2>
+      <div class="actions">
+        <button id="btn-random">🎲 Patient aléatoire (jeu de test)</button>
+        <button id="btn-benign">Exemple bénin</button>
+        <button id="btn-malignant">Exemple malin</button>
+        <button id="btn-error" class="ghost">Une erreur du modèle</button>
+      </div>
+      <p id="source" class="muted">Chargez un patient ou modifiez les valeurs ci-dessous à la main.</p>
+      <div id="form" class="groups"></div>
+    </section>
+
+    <section class="card result" id="result">
+      <h2>2. Prédiction</h2>
+      <div class="gauge"><div id="gauge-fill"></div><span id="gauge-label">—</span></div>
+      <p id="verdict" class="verdict">—</p>
+      <p id="truth" class="muted"></p>
+    </section>
+
+    <section class="card">
+      <h2>3. Évaluation sur le jeu de test (114 patients)</h2>
+      <p class="muted">Calculée en direct dans le navigateur avec un seuil de 0,5.</p>
+      <div class="eval">
+        <table class="cm" id="cm"></table>
+        <table class="metrics" id="metrics"></table>
+      </div>
+    </section>
+  </main>
+
+  <footer>Données : UCI Breast Cancer Wisconsin (Diagnostic) · Split 60/20/20 stratifié · Standardisation sur le train.</footer>
+  <script src="app.js"></script>
+</body>
+</html>
